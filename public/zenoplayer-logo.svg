@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">ZenoPlayer logo</title>
+  <desc id="desc">A neon lime and coral geometric Z play mark</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d6ff4b"/><stop offset="1" stop-color="#ff6b5f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="132" fill="#111410"/>
+  <path d="M126 142h260v63L218 307h168v63H126v-63l168-102H126z" fill="url(#g)"/>
+  <path d="M312 173v166l76-48V221z" fill="#111410" opacity=".9"/>
+</svg>

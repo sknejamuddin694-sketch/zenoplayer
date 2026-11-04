@@ -1,0 +1,8 @@
+{
+  // Build first (npm run build). The build writes the worker + assets into dist/
+  // and points wrangler at them automatically via .wrangler/deploy/config.json.
+  "name": "zenoplayer",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true }
+}

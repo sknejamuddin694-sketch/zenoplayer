@@ -1,0 +1,1 @@
+{"routes":[{"path":"/","title":"Home"},{"path":"/downloads","title":"Downloads"},{"path":"/me","title":"Me"},{"path":"/login","title":"Login"},{"path":"/search","title":"Search"},{"path":"/anime-library","title":"Anime Vault"},{"path":"/section/:name","title":"Browse section"},{"path":"/title/:slug","title":"Title"}]}
