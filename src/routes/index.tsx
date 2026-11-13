@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Play } from "lucide-react";
-import { get, type Section } from "@/lib/api";
+import { get, RateLimitError, type Section } from "@/lib/api";
 import { Header } from "@/components/Header";
 import { Row } from "@/components/Poster";
 import { getTab, sectionsForTab } from "@/lib/tabs";
@@ -92,10 +92,12 @@ function Home() {
       {isLoading && <div className="hero-skeleton" />}
       {error && !data && (
         <div className="p-10 text-center">
-          <p className="text-muted-foreground">Couldn't load movies.</p>
-          <button onClick={() => refetch()} disabled={isFetching} className="btn-primary mx-auto mt-4">
-            {isFetching ? "Loading…" : "Try again"}
-          </button>
+          <p className="text-muted-foreground">{error instanceof RateLimitError ? error.message : "Couldn't load movies."}</p>
+          {!(error instanceof RateLimitError) && (
+            <button onClick={() => refetch()} disabled={isFetching} className="btn-primary mx-auto mt-4">
+              {isFetching ? "Loading…" : "Try again"}
+            </button>
+          )}
         </div>
       )}
       {hero && (

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronLeft, Settings2, ChevronRight, Circle, CircleCheck, Crown, Download, FolderDown, ListPlus, Play, Share2, Star, X } from "lucide-react";
 import { downloads, history, myList } from "@/lib/library";
-import { get, watchUrl, type Section } from "@/lib/api";
+import { get, RateLimitError, watchUrl, type Section } from "@/lib/api";
 import { savedProgress, saveProgress, stablePlaybackTitle } from "@/lib/playback";
 import { Poster } from "@/components/Poster";
 import { looksLikeAnime, relatedAnime } from "@/lib/recommendations";
@@ -34,13 +34,14 @@ const RES = [0, 1080, 720, 480, 360];
 
 function TitlePage() {
   const { slug } = Route.useParams();
-  const { data, isLoading } = useQuery({ queryKey: ["detail", slug], queryFn: () => get<Detail>(`/detail/${slug}`) });
+  const { data, isLoading, error } = useQuery({ queryKey: ["detail", slug], queryFn: () => get<Detail>(`/detail/${slug}`) });
   const { data: eps } = useQuery({ queryKey: ["eps", slug], queryFn: () => get<Episodes>(`/episodes/${slug}`) });
   const isSeries = (eps?.total_seasons ?? 0) > 0;
   const [se, setSe] = useState(1);
   const [ep, setEp] = useState(1);
   const [res, setRes] = useState(720);
   const [playing, setPlaying] = useState(false);
+  const [playbackError, setPlaybackError] = useState(false);
   const player = useRef<HTMLDivElement>(null);
   const [info, setInfo] = useState(false);
   const [sheet, setSheet] = useState(false);
@@ -53,7 +54,7 @@ function TitlePage() {
   const { data: home } = useQuery({ queryKey: ["home"], queryFn: () => get<{ sections: Section[] }>("/home"), staleTime: 5 * 60_000 });
   const { data: animeFeed } = useQuery({ queryKey: ["anime-trending"], queryFn: () => get<Section>("/anime"), staleTime: 5 * 60_000 });
 
-  useEffect(() => { setPlaying(false); setPicked([]); setInList(myList.has(slug)); }, [slug]);
+  useEffect(() => { setPlaying(false); setPlaybackError(false); setPicked([]); setInList(myList.has(slug)); }, [slug]);
   useEffect(() => { if (data?.metadata) history.add({ name: data.metadata.title, poster_url: data.metadata.poster, slug }); }, [data, slug]);
   useEffect(() => {
     if (!data?.metadata?.title || !eps) return;
@@ -76,7 +77,12 @@ function TitlePage() {
     if (eps?.seasons.length && !eps.seasons.some((s) => s.season === browseSe)) setBrowseSe(eps.seasons[0]!.season);
   }, [eps, browseSe]);
 
-  if (isLoading || !data) return (<div className="min-h-screen"><div className="aspect-video w-full animate-pulse bg-card" /></div>);
+  if (isLoading) return (<div className="min-h-screen"><div className="aspect-video w-full animate-pulse bg-card" /></div>);
+  if (!data) return (
+    <div className="min-h-screen px-4 pt-10 text-center">
+      <p role="alert" className="text-muted-foreground">{error instanceof RateLimitError ? error.message : "Couldn't load this title."}</p>
+    </div>
+  );
   const m = data.metadata;
   const id = m.id;
   const src = watchUrl(id, slug, isSeries ? se : 0, isSeries ? ep : 0, res);
@@ -120,6 +126,7 @@ function TitlePage() {
   };
   const play = (s?: number, e?: number) => {
     rememberProgress();
+    setPlaybackError(false);
     if (s) { setSe(s); setBrowseSe(s); }
     if (e) setEp(e);
     setPlaying(true);
@@ -136,6 +143,7 @@ function TitlePage() {
         <div className="relative aspect-video w-full overflow-hidden bg-card">
           {playing ? (
             <video ref={video} key={src} src={src} controls autoPlay playsInline preload="auto" controlsList="nodownload noremoteplayback" disablePictureInPicture
+              onError={() => setPlaybackError(true)}
               onContextMenu={(e) => e.preventDefault()} className="h-full w-full bg-background"
               onLoadedMetadata={(e) => {
                 const v = e.currentTarget;
@@ -159,6 +167,11 @@ function TitlePage() {
               <img src={m.poster} alt={m.title} className="h-full w-full object-cover opacity-60" />
               <span className="play-fab absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2"><Play className="h-7 w-7 fill-current" /></span>
             </button>
+          )}
+          {playbackError && (
+            <div role="alert" className="absolute inset-x-3 bottom-3 rounded-lg bg-background/95 p-3 text-sm text-muted-foreground">
+              Playback is unavailable or rate-limited. If you just made many requests, wait 60 seconds before trying again.
+            </div>
           )}
           <button onClick={() => router.history.back()} aria-label="Back" className="absolute left-2 top-2 rounded-full p-1.5 text-foreground">
             <ChevronLeft className="h-7 w-7" />

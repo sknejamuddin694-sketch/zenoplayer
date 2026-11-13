@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { get, type Item } from "@/lib/api";
+import { get, RateLimitError, type Item } from "@/lib/api";
 import { Header } from "@/components/Header";
 import { Poster } from "@/components/Poster";
 import { BottomNav } from "@/components/BottomNav";
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/search")({
 
 function SearchPage() {
   const { q } = Route.useSearch();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["search", q],
     queryFn: () => get<{ movies: Item[] }>(`/search?q=${encodeURIComponent(q)}`),
     enabled: !!q,
@@ -32,6 +32,7 @@ function SearchPage() {
       <Header tabs active="" />
       <div className="px-4">
         <h1 className="mt-4 text-xl font-extrabold">Results for “{q}”</h1>
+        {error && <p role="alert" className="mt-3 text-muted-foreground">{error instanceof RateLimitError ? error.message : "Search is temporarily unavailable."}</p>}
         {isLoading && <p className="mt-6 text-muted-foreground">Searching…</p>}
         {data && !data.movies.length && <p className="mt-6 text-muted-foreground">Nothing found.</p>}
         <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">

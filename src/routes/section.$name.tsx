@@ -1,7 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
-import { get, type Section } from "@/lib/api";
+import { get, RateLimitError, type Section } from "@/lib/api";
 import { Poster } from "@/components/Poster";
 import { BottomNav } from "@/components/BottomNav";
 import { animeCollections } from "@/lib/recommendations";
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/section/$name")({
 function Page() {
   const { name } = Route.useParams();
   const router = useRouter();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["section", name],
     queryFn: async () => {
       const [a, b, movies, anime, animeTrend] = await Promise.all([
@@ -56,6 +56,7 @@ function Page() {
         <button onClick={() => router.history.back()} aria-label="Back"><ChevronLeft className="h-7 w-7" /></button>
         <h1 className="text-xl font-extrabold">{name}</h1>
       </header>
+      {error && <p role="alert" className="text-muted-foreground">{error instanceof RateLimitError ? error.message : "This section is temporarily unavailable."}</p>}
       {isLoading && <p className="text-muted-foreground">Loading…</p>}
       {data && !sec && <p className="text-muted-foreground">Nothing here.</p>}
       <div className="grid grid-cols-3 gap-2">{sec?.movies.map((m) => <Poster key={m.slug} item={m} />)}</div>
