@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Check, ChevronDown, ChevronLeft, Settings2, ChevronRight, Circle, CircleCheck, Crown, Download, FolderDown, ListPlus, Play, Share2, Star, X } from "lucide-react";
 import { downloads, history, myList } from "@/lib/library";
 import { get, RateLimitError, watchUrl, type Section } from "@/lib/api";
@@ -39,7 +40,7 @@ function TitlePage() {
   const isSeries = (eps?.total_seasons ?? 0) > 0;
   const [se, setSe] = useState(1);
   const [ep, setEp] = useState(1);
-  const [res, setRes] = useState(720);
+  const [res, setRes] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [playbackError, setPlaybackError] = useState(false);
   const player = useRef<HTMLDivElement>(null);
@@ -121,16 +122,27 @@ function TitlePage() {
       a.href = watchUrl(id, slug, isSeries ? browseSe : 0, isSeries ? e : 0, res).replace("/watch/", "/download/");
       setTimeout(() => a.click(), k * 800);
     });
-    downloads.add({ ...item, note: isSeries ? `S${browseSe} · ${list.length} episode${list.length > 1 ? "s" : ""}` : `${res || "Best"}p` });
+    downloads.add({ ...item, note: isSeries ? `S${browseSe} · ${list.length} episode${list.length > 1 ? "s" : ""}` : res ? `${res}p` : "Best" });
     setSheet(false);
   };
   const play = (s?: number, e?: number) => {
     rememberProgress();
-    setPlaybackError(false);
-    if (s) { setSe(s); setBrowseSe(s); }
-    if (e) setEp(e);
-    setPlaying(true);
+    flushSync(() => {
+      setPlaybackError(false);
+      if (s) { setSe(s); setBrowseSe(s); }
+      if (e) setEp(e);
+      setPlaying(true);
+    });
+    video.current?.play().catch(() => setPlaybackError(true));
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const changeQuality = (quality: number) => {
+    rememberProgress();
+    flushSync(() => {
+      setRes(quality);
+      setPick(null);
+    });
+    video.current?.play().catch(() => setPlaybackError(true));
   };
   const share = () => {
     if (navigator.share) navigator.share({ title: m.title, url: location.href }).catch(() => {});
@@ -251,9 +263,9 @@ function TitlePage() {
               <button key={x.season} onClick={() => { setBrowseSe(x.season); setPick(null); }}
                 className={`block w-full rounded-lg py-3.5 text-center ${x.season === browseSe ? "chip-on" : "bg-secondary text-muted-foreground"}`}>Season {String(x.season).padStart(2, "0")}</button>
             ))}
-            {pick === "quality" && RES.filter(Boolean).map((r) => (
-              <button key={r} onClick={() => { rememberProgress(); setRes(r); setPick(null); }}
-                className={`block w-full rounded-lg py-3.5 text-center ${r === res ? "chip-on" : "bg-secondary text-muted-foreground"}`}>{r}P</button>
+            {pick === "quality" && RES.map((r) => (
+              <button key={r} onClick={() => changeQuality(r)}
+                className={`block w-full rounded-lg py-3.5 text-center ${r === res ? "chip-on" : "bg-secondary text-muted-foreground"}`}>{r ? `${r}P` : "Best"}</button>
             ))}
           </div>
         </div>
@@ -268,9 +280,9 @@ function TitlePage() {
           <div className="mx-4 rounded-lg bg-card p-4">
             <p className="font-extrabold">Resources <span className="text-sm font-normal text-muted-foreground">Choose quality</span></p>
             <div className="mt-3 grid grid-cols-4 gap-2">
-              {RES.filter(Boolean).reverse().map((r) => (
+              {[0, ...RES.filter(Boolean).reverse()].map((r) => (
                 <button key={r} onClick={() => setRes(r)} className={r === res ? "ep ep-on gap-1" : "ep gap-1"}>
-                  <span className="flex items-center gap-1">{r >= 720 && <Crown className="h-3.5 w-3.5 text-premium" />}{r}P</span>
+                  <span className="flex items-center gap-1">{(r === 0 || r >= 720) && <Crown className="h-3.5 w-3.5 text-premium" />}{r ? `${r}P` : "Best"}</span>
                 </button>
               ))}
             </div>
@@ -287,7 +299,7 @@ function TitlePage() {
                 );
               })
             ) : (
-              <p className="py-6 text-sm text-muted-foreground">Movie · {res}p</p>
+              <p className="py-6 text-sm text-muted-foreground">Movie · {res ? `${res}p` : "Best"}</p>
             )}
           </div>
           <div className="flex items-center gap-3 border-t px-4 py-3">
