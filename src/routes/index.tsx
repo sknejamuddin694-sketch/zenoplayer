@@ -72,8 +72,6 @@ function Home() {
       return { sections: [...home.sections, ...extra] };
     },
     staleTime: 5 * 60_000,
-    refetchInterval: 10 * 60_000,
-    refetchOnWindowFocus: true,
   });
   const rest = sectionsForTab(tab, data?.sections ?? []);
   const ownBanner = data?.sections.find((s) => s.section === "Banner")?.movies ?? [];

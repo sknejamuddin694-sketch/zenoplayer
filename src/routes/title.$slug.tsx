@@ -39,8 +39,8 @@ function TitlePage() {
   const isSeries = (eps?.total_seasons ?? 0) > 0;
   const [se, setSe] = useState(1);
   const [ep, setEp] = useState(1);
-  const [res, setRes] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [res, setRes] = useState(720);
+  const [playing, setPlaying] = useState(false);
   const player = useRef<HTMLDivElement>(null);
   const [info, setInfo] = useState(false);
   const [sheet, setSheet] = useState(false);
@@ -50,10 +50,10 @@ function TitlePage() {
   const [pick, setPick] = useState<null | "lang" | "season" | "quality">(null);
   const video = useRef<HTMLVideoElement>(null);
   const router = useRouter();
-  const { data: home } = useQuery({ queryKey: ["home"], queryFn: () => get<{ sections: Section[] }>("/home"), staleTime: 5 * 60_000, refetchInterval: 10 * 60_000, refetchOnWindowFocus: true });
-  const { data: animeFeed } = useQuery({ queryKey: ["anime-trending"], queryFn: () => get<Section>("/anime"), staleTime: 5 * 60_000, refetchInterval: 10 * 60_000 });
+  const { data: home } = useQuery({ queryKey: ["home"], queryFn: () => get<{ sections: Section[] }>("/home"), staleTime: 5 * 60_000 });
+  const { data: animeFeed } = useQuery({ queryKey: ["anime-trending"], queryFn: () => get<Section>("/anime"), staleTime: 5 * 60_000 });
 
-  useEffect(() => { setPlaying(true); setPicked([]); setInList(myList.has(slug)); }, [slug]);
+  useEffect(() => { setPlaying(false); setPicked([]); setInList(myList.has(slug)); }, [slug]);
   useEffect(() => { if (data?.metadata) history.add({ name: data.metadata.title, poster_url: data.metadata.poster, slug }); }, [data, slug]);
   useEffect(() => {
     if (!data?.metadata?.title || !eps) return;

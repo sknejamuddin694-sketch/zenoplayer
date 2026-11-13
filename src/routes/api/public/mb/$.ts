@@ -39,7 +39,12 @@ async function handle({ request }: { request: Request }) {
   out.headers.set("x-content-type-options", "nosniff");
   out.headers.set("referrer-policy", "same-origin");
   out.headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
-  out.headers.set("cache-control", out.headers.get("cache-control") ?? "private, no-store");
+  const media = /^\/(watch|download|api\/stream)(\/|$)/.test(path);
+  if (!media && res.status === 200) {
+    out.headers.set("cache-control", "public, max-age=30, s-maxage=180, stale-while-revalidate=300");
+  } else {
+    out.headers.set("cache-control", "private, no-store");
+  }
   return out;
 }
 

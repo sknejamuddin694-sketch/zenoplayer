@@ -48,8 +48,6 @@ function Page() {
       };
     },
     staleTime: 5 * 60_000,
-    refetchInterval: 10 * 60_000,
-    refetchOnWindowFocus: true,
   });
   const sec = data?.sections.find((s) => s.section === name);
   return (
