@@ -7,6 +7,7 @@ import { downloads, history, myList } from "@/lib/library";
 import { get, RateLimitError, watchUrl, type Section } from "@/lib/api";
 import { savedProgress, saveProgress, stablePlaybackTitle } from "@/lib/playback";
 import { Poster } from "@/components/Poster";
+import { BottomNav } from "@/components/BottomNav";
 import { looksLikeAnime, relatedAnime } from "@/lib/recommendations";
 
 type Dub = { subjectId: string; lanName: string; detailPath: string };
@@ -150,7 +151,7 @@ function TitlePage() {
   };
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="app-page">
       <div ref={player} className="sticky top-0 z-30 bg-background">
         <div className="relative aspect-video w-full overflow-hidden bg-card">
           {playing ? (
@@ -196,7 +197,7 @@ function TitlePage() {
         )}
       </div>
 
-      <div className="px-4 pt-4">
+      <main className="app-content pt-4">
         <div className="flex items-baseline gap-3">
           <h1 className="min-w-0 flex-1 text-xl font-extrabold leading-tight">{m.title}</h1>
           <button onClick={() => setInfo((v) => !v)} className="flex shrink-0 items-center text-sm text-muted-foreground">Info <ChevronRight className="h-4 w-4" /></button>
@@ -244,7 +245,7 @@ function TitlePage() {
         <div className="mt-4 grid grid-cols-3 gap-2">
           {forYou.map((x) => <Poster key={x.slug} item={x} />)}
         </div>
-      </div>
+      </main>
 
       {pick && (
         <div className="sheet fixed inset-x-0 bottom-0 top-[56vw] z-50 overflow-y-auto">
@@ -358,9 +359,10 @@ function TitlePage() {
         </div>
       )}
 
-      <button onClick={() => setSheet(true)} className="btn-primary fixed bottom-6 left-1/2 z-40 -translate-x-1/2 px-8 py-3 text-lg">
+      <button onClick={() => setSheet(true)} className="title-download-cta btn-primary">
         <Download className="h-5 w-5" /> Download
       </button>
+      <BottomNav />
     </div>
   );
 }

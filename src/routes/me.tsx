@@ -2,17 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowRight, Bookmark, Clock, FolderDown, Play, UserRound } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { Header } from "@/components/Header";
 import { history, myList, type Saved } from "@/lib/library";
 import { readSession, type Session } from "@/lib/auth";
 import { stablePlaybackTitle, watchProgress, type WatchProgress } from "@/lib/playback";
 
 export const Route = createFileRoute("/me")({
-  head: () => ({
-    meta: [
-      { title: "Me — ZenoPlayer" },
-      { name: "description", content: "Your account and watch history on ZenoPlayer." },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "My List — ZenoPlayer" }, { name: "description", content: "Your anime list, watch history, and episode tracker on ZenoPlayer." }] }),
   component: Page,
 });
 
@@ -20,64 +16,100 @@ function Page() {
   const [hist, setHist] = useState<Saved[]>([]);
   const [savedList, setSavedList] = useState<Saved[]>([]);
   const [watched, setWatched] = useState<WatchProgress[]>([]);
-  const [count, setCount] = useState(0);
   const [session, setSession] = useState<Session>({ mode: "guest", name: "Guest" });
+
   useEffect(() => {
     setHist(history.list());
     setSavedList(myList.list());
-    setCount(myList.list().length);
     setWatched(watchProgress());
     setSession(readSession());
   }, []);
 
+  const trackedEpisodes = watched.length;
+  const completed = watched.filter((entry) => entry.finished).length;
+  const inProgress = watched.filter((entry) => !entry.finished).length;
+  const titleItems = [...savedList, ...hist.filter((entry) => !savedList.some((saved) => saved.slug === entry.slug))];
+
   return (
-    <div className="min-h-screen px-4 pb-24 pt-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary"><UserRound className="h-6 w-6" /></div>
-        <div className="flex-1">
-          <h1 className="font-display text-2xl font-bold">{session.name}</h1>
-          <span className="mt-1 inline-block rounded bg-secondary px-3 py-1 text-sm text-muted-foreground">{session.mode === "guest" ? "Guest" : session.email}</span>
+    <div className="app-page">
+      <Header />
+      <main className="app-content space-y-4">
+        <section className="profile-route-hero">
+          <div className="profile-route-top">
+            <div className="tracker-avatar"><UserRound className="h-7 w-7" /></div>
+            <div>
+              <p className="page-kicker">YOUR TRACKER</p>
+              <h1 className="profile-route-name">{session.name}</h1>
+              <span className="profile-session-badge">{session.mode === "guest" ? "GUEST PROFILE" : session.email ?? "ACCOUNT"}</span>
+            </div>
+            <Link to="/login" className="btn-primary px-4 py-2 text-xs">{session.mode === "guest" ? "Connect" : "Switch"}</Link>
+          </div>
+          <p className="profile-route-note">{session.mode === "guest" ? "Your list and watch progress are saved locally on this device." : "Your anime tracker is ready whenever you are."}</p>
+        </section>
+
+        {session.mode === "guest" && (
+          <Link to="/login" className="route-panel flex items-center gap-3 border-primary/20 bg-primary/5">
+            <div className="min-w-0 flex-1"><p className="font-bold">Keep your tracker connected</p><p className="mt-1 text-xs text-muted-foreground">Create an account to keep your list together on this device.</p></div>
+            <ArrowRight className="h-5 w-5 shrink-0 text-primary" />
+          </Link>
+        )}
+
+        <div className="route-stat-grid">
+          <div className="route-stat-card"><strong>{savedList.length}</strong><span>On your list</span></div>
+          <div className="route-stat-card"><strong>{inProgress}</strong><span>In progress</span></div>
+          <div className="route-stat-card"><strong>{completed}</strong><span>Completed</span></div>
         </div>
-        <Link to="/login" className="btn-primary rounded-lg px-4 py-2">{session.mode === "guest" ? "Log in" : "Switch"}</Link>
-      </div>
 
-      {session.mode === "guest" && <Link to="/login" className="mt-5 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 p-4">
-        <div className="flex-1"><p className="font-bold">Connect your Guest account</p><p className="mt-1 text-sm text-muted-foreground">Create an account and keep your history and list on this device.</p></div>
-        <ArrowRight className="h-5 w-5 text-primary" />
-      </Link>}
+        <section className="route-panel">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div><p className="page-kicker">YOUR COLLECTION</p><h2 className="font-display text-xl font-extrabold">My List <span className="text-sm text-muted-foreground">{savedList.length}</span></h2></div>
+            <Link to="/anime-library" className="section-link">Add anime <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+          {savedList.length ? (
+            <div className="profile-anime-grid">
+              {savedList.map((item) => (
+                <Link key={item.slug} to="/title/$slug" params={{ slug: item.slug }} className="profile-anime-card">
+                  <img src={item.poster_url} alt={item.name} loading="lazy" />
+                  <p>{item.name}</p>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state"><Bookmark className="h-7 w-7" /><p className="font-bold text-foreground">Your list is empty</p><p className="text-xs">Open any title and tap “Add to list” to track it here.</p><Link to="/anime-library" className="btn-primary mt-1 px-4 py-2 text-xs">Browse anime</Link></div>
+          )}
+        </section>
 
-      <div className="list-card mt-5">
-        <div className="flex items-center gap-3 px-4 pt-4"><Clock className="h-6 w-6 text-muted-foreground" /><span className="text-base font-semibold">Watch History</span></div>
-        <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-4 pt-3">
-          {hist.length === 0 && <p className="text-sm text-muted-foreground">Nothing watched yet.</p>}
-          {hist.map((h) => <Link key={h.slug} to="/title/$slug" params={{ slug: h.slug }} className="w-32 shrink-0"><img src={h.poster_url} alt="" className="aspect-video w-full rounded object-cover" /><p className="mt-1 line-clamp-1 text-sm">{h.name}</p></Link>)}
-        </div>
-      </div>
+        <section className="route-panel">
+          <div className="mb-2 flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /><div><p className="page-kicker">PICK UP AGAIN</p><h2 className="font-display text-lg font-extrabold">Watch history</h2></div></div>
+          {hist.length ? hist.slice(0, 8).map((item) => (
+            <Link key={item.slug} to="/title/$slug" params={{ slug: item.slug }} className="profile-history-item">
+              <div className="profile-history-poster"><img src={item.poster_url} alt="" loading="lazy" /></div>
+              <div className="min-w-0 flex-1"><p className="line-clamp-1 text-sm font-bold">{item.name}</p><p className="text-xs text-muted-foreground">Opened recently</p></div>
+              <Play className="h-4 w-4 fill-current text-primary" />
+            </Link>
+          )) : <div className="empty-state mt-3"><Clock className="h-6 w-6" /><p className="text-sm">Your watch history will show up here.</p></div>}
+        </section>
 
-      <div className="list-card mt-3">
-        <div className="flex items-center gap-3 border-b px-4 py-4"><Bookmark className="h-6 w-6 text-muted-foreground" /><span className="flex-1 text-base font-semibold">My List</span><span className="text-muted-foreground">{count}</span></div>
-        {savedList.length > 0 && <div className="grid grid-cols-3 gap-2 p-3">
-          {savedList.map((item) => <Link key={item.slug} to="/title/$slug" params={{ slug: item.slug }}>
-            <img src={item.poster_url} alt="" className="aspect-[2/3] w-full rounded object-cover" />
-            <p className="mt-1 line-clamp-2 text-xs">{item.name}</p>
-          </Link>)}
-        </div>}
-        {savedList.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">My List is empty.</p>}
-        <div className="border-t px-4 pb-2 pt-4"><p className="font-semibold">Watched episodes</p><p className="mt-1 text-xs text-muted-foreground">Har dekha hua season aur episode yahan save rahega.</p></div>
-        <div className="divide-y">
-          {watched.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Abhi episode progress nahi hai.</p>}
-          {watched.map((entry) => {
-            const item = [...hist, ...savedList].find((saved) => stablePlaybackTitle(saved.name) === entry.title);
+        <section className="route-panel">
+          <div className="mb-2 flex items-center gap-2"><Play className="h-5 w-5 fill-current text-primary" /><div><p className="page-kicker">EPISODE PROGRESS</p><h2 className="font-display text-lg font-extrabold">Watching</h2></div></div>
+          {watched.length ? watched.slice(0, 10).map((entry) => {
+            const item = titleItems.find((saved) => stablePlaybackTitle(saved.name) === entry.title);
             if (!item) return null;
-            return <Link key={`${entry.title}-${entry.season}-${entry.episode}`} to="/title/$slug" params={{ slug: item.slug }} className="flex items-center gap-3 px-4 py-3">
-              <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded bg-card"><img src={item.poster_url} alt="" className="h-full w-full object-cover" /><Play className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 fill-current" /></div>
-              <div className="min-w-0 flex-1"><p className="line-clamp-1 text-sm font-semibold">{item.name}</p><p className="text-xs text-muted-foreground">S{String(entry.season).padStart(2, "0")} E{String(entry.episode).padStart(2, "0")} · {entry.finished ? "Finished" : "In progress"}</p></div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-            </Link>;
-          })}
-        </div>
-        <Link to="/downloads" className="flex items-center gap-3 px-4 py-4"><FolderDown className="h-6 w-6 text-muted-foreground" /><span className="flex-1 text-base font-semibold">Downloads</span><ArrowRight className="h-5 w-5 text-muted-foreground" /></Link>
-      </div>
+            return (
+              <Link key={`${entry.title}-${entry.season}-${entry.episode}`} to="/title/$slug" params={{ slug: item.slug }} className="profile-progress-row">
+                <div className="profile-progress-poster"><img src={item.poster_url} alt="" loading="lazy" /></div>
+                <div className="min-w-0 flex-1"><p className="line-clamp-1 text-sm font-bold">{item.name}</p><p className="text-xs text-muted-foreground">S{String(entry.season).padStart(2, "0")} · E{String(entry.episode).padStart(2, "0")} · {entry.finished ? "Finished" : "In progress"}</p></div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            );
+          }) : <p className="py-3 text-sm text-muted-foreground">No episodes tracked yet. Start a title to save your progress.</p>}
+          {trackedEpisodes > 10 && <p className="mt-2 text-xs text-muted-foreground">Showing your 10 most recently updated episodes.</p>}
+        </section>
+
+        <Link to="/downloads" className="route-panel flex items-center gap-3">
+          <FolderDown className="h-5 w-5 text-primary" /><span className="flex-1 font-bold">Downloads</span><ArrowRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+      </main>
       <BottomNav />
     </div>
   );

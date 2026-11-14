@@ -32,7 +32,7 @@ export function readSession(): Session {
   } catch { return guest; }
 }
 
-export function useGuest() {
+export function setGuestSession() {
   if (typeof window !== "undefined") localStorage.setItem(SESSION_KEY, JSON.stringify(guest));
   return guest;
 }

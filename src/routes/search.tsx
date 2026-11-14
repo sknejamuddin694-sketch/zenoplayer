@@ -1,22 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { Search as SearchIcon, Sparkles } from "lucide-react";
 import { get, RateLimitError, type Item } from "@/lib/api";
 import { Header } from "@/components/Header";
 import { Poster } from "@/components/Poster";
 import { BottomNav } from "@/components/BottomNav";
 
 export const Route = createFileRoute("/search")({
-  validateSearch: (s: Record<string, unknown>) => ({ q: String(s["q"] ?? "") }),
-  head: () => ({
-    meta: [
-      { title: "Search — ZenoPlayer" },
-      { name: "description", content: "Search movies and TV series on ZenoPlayer." },
-      { property: "og:title", content: "Search — ZenoPlayer" },
-      { property: "og:description", content: "Search movies and TV series on ZenoPlayer." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  validateSearch: (search: Record<string, unknown>) => ({ q: String(search["q"] ?? "") }),
+  head: () => ({ meta: [{ title: "Search anime — ZenoPlayer" }, { name: "description", content: "Find anime and titles to add to your ZenoPlayer tracker." }] }),
   component: SearchPage,
 });
 
@@ -27,18 +19,22 @@ function SearchPage() {
     queryFn: () => get<{ movies: Item[] }>(`/search?q=${encodeURIComponent(q)}`),
     enabled: !!q,
   });
+
   return (
-    <div className="min-h-screen pb-24">
-      <Header tabs active="" />
-      <div className="px-4">
-        <h1 className="mt-4 text-xl font-extrabold">Results for “{q}”</h1>
-        {error && <p role="alert" className="mt-3 text-muted-foreground">{error instanceof RateLimitError ? error.message : "Search is temporarily unavailable."}</p>}
-        {isLoading && <p className="mt-6 text-muted-foreground">Searching…</p>}
-        {data && !data.movies.length && <p className="mt-6 text-muted-foreground">Nothing found.</p>}
-        <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-          {data?.movies.map((m) => <Poster key={m.slug} item={m} />)}
+    <div className="app-page">
+      <Header initialQuery={q} />
+      <main className="app-content">
+        <p className="page-kicker">DISCOVER SOMETHING NEW</p>
+        <h1 className="page-heading">{q ? "Search results" : "Find your next favorite"}</h1>
+        {q && <p className="mb-4 text-sm text-muted-foreground">Matches for <span className="font-bold text-foreground">“{q}”</span>{data ? ` · ${data.movies.length} titles` : ""}</p>}
+        {error && <p role="alert" className="route-panel text-sm text-muted-foreground">{error instanceof RateLimitError ? error.message : "Search is temporarily unavailable."}</p>}
+        {isLoading && <div className="route-panel animate-pulse text-sm text-muted-foreground">Finding titles…</div>}
+        {!q && <div className="empty-state mt-4"><SearchIcon className="h-7 w-7" /><p className="font-bold text-foreground">Search anime, movies, and series</p><p className="text-xs">Type in the search bar above to get started.</p></div>}
+        {q && data && !data.movies.length && <div className="empty-state mt-5"><Sparkles className="h-7 w-7" /><p className="font-bold text-foreground">No titles found</p><p className="text-xs">Try another title or a shorter search.</p></div>}
+        <div className="mt-5 grid grid-cols-2 gap-3 min-[420px]:grid-cols-3 md:grid-cols-5">
+          {data?.movies.map((item) => <Poster key={item.slug} item={item} />)}
         </div>
-      </div>
+      </main>
       <BottomNav />
     </div>
   );

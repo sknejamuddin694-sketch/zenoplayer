@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Play } from "lucide-react";
+import { ArrowUpRight, Play } from "lucide-react";
 import { get, RateLimitError, type Section } from "@/lib/api";
 import { Header } from "@/components/Header";
 import { Row } from "@/components/Poster";
-import { getTab, sectionsForTab } from "@/lib/tabs";
 import { BottomNav } from "@/components/BottomNav";
+import { TrackerOverview } from "@/components/TrackerOverview";
+import { getTab, sectionsForTab } from "@/lib/tabs";
 import { animeCollections, uniqueItems } from "@/lib/recommendations";
 
 async function optional<T>(path: string, fallback: T): Promise<T> {
@@ -14,13 +15,13 @@ async function optional<T>(path: string, fallback: T): Promise<T> {
 }
 
 export const Route = createFileRoute("/")({
-  validateSearch: (s: Record<string, unknown>): { tab?: string } => (typeof s["tab"] === "string" ? { tab: s["tab"] } : {}),
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => (typeof search["tab"] === "string" ? { tab: search["tab"] } : {}),
   head: () => ({
     meta: [
-      { title: "ZenoPlayer — Watch movies & TV series free" },
-      { name: "description", content: "Stream trending movies, TV series, anime and K-dramas in HD." },
-      { property: "og:title", content: "ZenoPlayer — Watch movies & TV series" },
-      { property: "og:description", content: "Stream trending movies, TV series, anime and K-dramas in HD." },
+      { title: "ZenoPlayer — Your Anime Tracker" },
+      { name: "description", content: "Track your anime and discover your next favorite series on ZenoPlayer." },
+      { property: "og:title", content: "ZenoPlayer — Your Anime Tracker" },
+      { property: "og:description", content: "Track episodes, keep your list, and find your next anime." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -47,13 +48,11 @@ function Home() {
           optional<Section>("/anime", { section: "Anime", count: 0, movies: [] }),
           optional<{ sections: Section[] }>("/animation", { sections: [] }),
         ]);
-        const top = home.sections.filter((x) => /anime/i.test(x.section));
+        const top = home.sections.filter((section) => /anime/i.test(section.section));
         const trending = uniqueItems(trend.movies ?? []);
-        const banner = { section: "Banner", count: 0, movies: uniqueItems([...trending, ...top.flatMap((x) => x.movies)]).slice(0, 8) };
+        const banner = { section: "Banner", count: 0, movies: uniqueItems([...trending, ...top.flatMap((section) => section.movies)]).slice(0, 8) };
         const curated = animeCollections(home.sections, trending);
-        const liveAnimation = animation.sections.flatMap((section) => section.movies).length
-          ? animation.sections
-          : [];
+        const liveAnimation = animation.sections.flatMap((section) => section.movies).length ? animation.sections : [];
         const seen = new Set<string>();
         const shelves = [...liveAnimation, ...top, ...curated].filter((section) => {
           if (seen.has(section.section)) return false;
@@ -68,73 +67,55 @@ function Home() {
         optional<{ sections: Section[] }>("/animation", { sections: [] }),
         optional<{ sections: Section[] }>("/tv-series", { sections: [] }),
       ]);
-      const extra = [...movies.sections, ...tv.sections, ...anime.sections];
-      return { sections: [...home.sections, ...extra] };
+      return { sections: [...home.sections, ...movies.sections, ...tv.sections, ...anime.sections] };
     },
     staleTime: 5 * 60_000,
   });
   const rest = sectionsForTab(tab, data?.sections ?? []);
-  const ownBanner = data?.sections.find((s) => s.section === "Banner")?.movies ?? [];
+  const ownBanner = data?.sections.find((section) => section.section === "Banner")?.movies ?? [];
   const banner = getTab(tab).match ? rest[0]?.movies.slice(0, 8) ?? [] : ownBanner;
-  const [i, setI] = useState(0);
+  const [index, setIndex] = useState(0);
   useEffect(() => {
     if (!banner.length) return;
-    const t = setInterval(() => setI((x) => (x + 1) % banner.length), 6000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setIndex((current) => (current + 1) % banner.length), 7000);
+    return () => clearInterval(timer);
   }, [banner.length]);
-  useEffect(() => setI(0), [tab]);
-  const hero = banner[i] ?? banner[0];
-
+  useEffect(() => setIndex(0), [tab]);
+  const hero = banner[index] ?? banner[0];
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="app-page">
       <Header tabs active={tab} />
-      {isLoading && <div className="hero-skeleton" />}
-      {error && !data && (
-        <div className="p-10 text-center">
-          <p className="text-muted-foreground">{error instanceof RateLimitError ? error.message : "Couldn't load movies."}</p>
-          {!(error instanceof RateLimitError) && (
-            <button onClick={() => refetch()} disabled={isFetching} className="btn-primary mx-auto mt-4">
-              {isFetching ? "Loading…" : "Try again"}
-            </button>
-          )}
-        </div>
-      )}
-      {hero && (
-        <>
-          <section className="hero">
-            <img src={hero.poster_url} alt="" className="backdrop" aria-hidden="true" />
-            <img src={hero.poster_url} alt={hero.name} className="hero-img" />
-            <div className="hero-fade" />
-            <div className="hero-copy">
-              <p className="hero-kicker">ZenoPlayer spotlight</p>
-              <h1>Best Movies and TV Shows to Watch</h1>
-              <p>Fresh picks, popular series and anime in one place.</p>
-            </div>
-          </section>
-          <div className="no-scrollbar relative z-10 -mt-12 flex gap-3 overflow-x-auto px-4">
-            {banner.map((b, k) => (
-              <Link
-                key={b.slug}
-                to="/title/$slug"
-                params={{ slug: b.slug }}
-                onMouseEnter={() => setI(k)}
-                className={`flex w-[85%] max-w-md shrink-0 items-end gap-3 rounded-lg bg-card px-3 pb-3 ${k === i ? "" : "opacity-70"}`}
-              >
-                <img src={b.poster_url} alt="" className="-mt-4 h-20 w-16 rounded bg-secondary object-contain" />
-                <div className="min-w-0 flex-1 pb-1">
-                  <p className="line-clamp-1 text-base font-semibold">{b.name}</p>
-                  <p className="text-sm text-muted-foreground">{b.badge ?? "Featured"}</p>
-                </div>
-                <span className="play-fab mb-2"><Play className="h-4 w-4 fill-current" /></span>
-              </Link>
-            ))}
+      <main className="app-content">
+        <TrackerOverview />
+
+        {isLoading && <div className="route-panel mt-6 animate-pulse text-sm text-muted-foreground">Loading your next favorites…</div>}
+        {error && !data && (
+          <div className="route-panel mt-6 text-center">
+            <p className="text-sm text-muted-foreground">{error instanceof RateLimitError ? error.message : "Couldn't load titles right now."}</p>
+            {!(error instanceof RateLimitError) && <button onClick={() => refetch()} disabled={isFetching} className="btn-primary mt-4">{isFetching ? "Loading…" : "Try again"}</button>}
           </div>
-        </>
-      )}
-      {rest.map((s, k) => (
-        <Row key={s.section} section={s.section} title={k === 0 ? `${s.section} 🔥` : s.section} items={s.movies} />
-      ))}
+        )}
+
+        {hero && (
+          <section className="spotlight-card mt-7" aria-label="Featured title">
+            <div className="spotlight-copy">
+              <p className="page-kicker">{tab === "anime" ? "ANIME SPOTLIGHT" : "TODAY'S SPOTLIGHT"}</p>
+              <h2>{tab === "anime" ? "Your next anime obsession" : "Find your next favorite"}</h2>
+              <p className="line-clamp-1">{hero.name}{hero.badge ? ` · ${hero.badge}` : ""}</p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Link to="/title/$slug" params={{ slug: hero.slug }} className="btn-primary px-4 py-2 text-xs">Explore title <Play className="h-3.5 w-3.5 fill-current" /></Link>
+                {banner.length > 1 && <button onClick={() => setIndex((current) => (current + 1) % banner.length)} className="btn-ghost px-3 py-2 text-xs">Next pick <ArrowUpRight className="h-3.5 w-3.5" /></button>}
+              </div>
+            </div>
+            <Link to="/title/$slug" params={{ slug: hero.slug }} className="spotlight-image" aria-label={`Explore ${hero.name}`}>
+              <img src={hero.poster_url} alt={hero.name} loading="lazy" />
+            </Link>
+          </section>
+        )}
+
+        {rest.map((section) => <Row key={section.section} section={section.section} title={section.section} items={section.movies} />)}
+      </main>
       <BottomNav />
     </div>
   );

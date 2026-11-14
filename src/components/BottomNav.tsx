@@ -1,14 +1,27 @@
 import { Link } from "@tanstack/react-router";
-import { Download, Home, User } from "lucide-react";
+import { Bookmark, Compass, Home, Search, UsersRound } from "lucide-react";
 
 export function BottomNav() {
-  const cls = "flex flex-col items-center gap-1 text-xs text-muted-foreground";
-  const on = { className: "flex flex-col items-center gap-1 text-xs text-foreground [&_svg]:text-primary [&_svg]:fill-primary/30" };
+  const navClass = "nav-item";
+  const activeClass = { className: "nav-item is-active" };
+
   return (
-    <nav className="bottom-nav">
-      <Link to="/" className={cls} activeProps={on} activeOptions={{ exact: true }}><Home className="h-6 w-6" />Home</Link>
-      <Link to="/downloads" className={cls} activeProps={on}><Download className="h-6 w-6" />Downloads</Link>
-      <Link to="/me" className={cls} activeProps={on}><User className="h-6 w-6" />Me</Link>
+    <nav className="bottom-nav" aria-label="Main navigation">
+      <Link to="/" search={{ tab: "trending" }} className={navClass} activeProps={activeClass} activeOptions={{ exact: true }}>
+        <Home aria-hidden="true" />Home
+      </Link>
+      <Link to="/me" className={navClass} activeProps={activeClass}>
+        <Bookmark aria-hidden="true" />My List
+      </Link>
+      <Link to="/section/$name" params={{ name: "Trending Anime" }} className={navClass} activeProps={activeClass}>
+        <Compass aria-hidden="true" />For You
+      </Link>
+      <Link to="/search" search={{ q: "" }} className={navClass} activeProps={activeClass}>
+        <Search aria-hidden="true" />Search
+      </Link>
+      <Link to="/anime-library" className={navClass} activeProps={activeClass}>
+        <UsersRound aria-hidden="true" />Community
+      </Link>
     </nav>
   );
 }

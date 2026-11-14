@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronRight } from "lucide-react";
+import { ArrowUpRight, Play } from "lucide-react";
 import type { Item } from "@/lib/api";
 
 export function Poster({ item }: { item: Item }) {
@@ -8,8 +8,9 @@ export function Poster({ item }: { item: Item }) {
       <div className="poster-frame">
         <img src={item.poster_url} alt={item.name} loading="lazy" />
         {item.badge ? <span className="poster-badge">{item.badge}</span> : null}
+        <span className="poster-play" aria-hidden="true"><Play className="h-4 w-4 fill-current" /></span>
       </div>
-      <p className="line-clamp-2 min-h-[3.25rem] px-2 py-2 text-sm leading-5 text-foreground/85">{item.name}</p>
+      <p className="poster-title">{item.name}</p>
     </Link>
   );
 }
@@ -17,17 +18,15 @@ export function Poster({ item }: { item: Item }) {
 export function Row({ title, items, section }: { title: string; items: Item[]; section?: string }) {
   if (!items?.length) return null;
   return (
-    <section className="mt-6">
-      <div className="flex items-center justify-between px-4">
-        <h2 className="text-lg font-extrabold">{title}</h2>
-        <Link to="/section/$name" params={{ name: section ?? title }} className="flex items-center text-sm text-muted-foreground">
-          All <ChevronRight className="h-4 w-4" />
-        </Link>
+    <section className="poster-row">
+      <div className="poster-row-heading">
+        <h2>{title}</h2>
+        <Link to="/section/$name" params={{ name: section ?? title }} className="section-link">View all <ArrowUpRight className="h-4 w-4" /></Link>
       </div>
       <div className="row-scroll">
-        {items.map((m) => (
-          <div key={m.slug} className="w-[30%] max-w-44 shrink-0">
-            <Poster item={m} />
+        {items.map((item) => (
+          <div key={item.slug} className="w-[32%] max-w-44 shrink-0">
+            <Poster item={item} />
           </div>
         ))}
       </div>

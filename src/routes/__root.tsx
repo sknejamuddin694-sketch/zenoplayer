@@ -74,11 +74,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ZenoPlayer" },
-      { name: "description", content: "A sharper way to discover and watch movies, series and anime." },
+      { title: "ZenoPlayer — Your Anime Tracker" },
+      { name: "description", content: "Track your anime, pick up where you left off, and discover what to watch next." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "theme-color", content: "#111410" },
+      { name: "theme-color", content: "#09090d" },
     ],
     links: [
       {
