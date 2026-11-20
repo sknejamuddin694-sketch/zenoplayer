@@ -149,6 +149,13 @@ async function handle({ request }: { request: Request }) {
             watch.searchParams.set("ep", String(episode.ep ?? 1));
             watch.searchParams.set("resolution", "480");
             episode.watch_url = watch.toString();
+
+            const download = new URL(`/api/public/mb/download/${subjectId}`, url.origin);
+            download.searchParams.set("detail_path", slug);
+            download.searchParams.set("se", String(episode.se ?? season.season ?? season.se ?? 1));
+            download.searchParams.set("ep", String(episode.ep ?? 1));
+            download.searchParams.set("resolution", "480");
+            episode.download_url = download.toString();
           }
         }
         res = new Response(JSON.stringify(episodePayload), { status: res.status, statusText: res.statusText, headers: res.headers });
