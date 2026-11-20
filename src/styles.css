@@ -296,11 +296,3 @@
 @media (min-width: 520px) { .community-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 700px) { .community-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; } .title-download-cta { bottom: 5.9rem; } }
 
-/* Hide the duplicate native audio controls on mobile video playback. */
-video::-webkit-media-controls-mute-button,
-video::-webkit-media-controls-volume-slider,
-video::-webkit-media-controls-volume-control-container,
-video::-webkit-media-controls-volume-control-container.closed,
-video::-webkit-media-controls-volume-control-container.open {
-  display: none !important;
-}
