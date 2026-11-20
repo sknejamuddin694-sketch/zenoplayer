@@ -295,3 +295,12 @@
 .title-download-cta { position: fixed; z-index: 41; bottom: calc(5.25rem + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); padding: 0.78rem 1.5rem; white-space: nowrap; font-size: 0.95rem; }
 @media (min-width: 520px) { .community-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 700px) { .community-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; } .title-download-cta { bottom: 5.9rem; } }
+
+/* Hide the duplicate native audio controls on mobile video playback. */
+video::-webkit-media-controls-mute-button,
+video::-webkit-media-controls-volume-slider,
+video::-webkit-media-controls-volume-control-container,
+video::-webkit-media-controls-volume-control-container.closed,
+video::-webkit-media-controls-volume-control-container.open {
+  display: none !important;
+}
