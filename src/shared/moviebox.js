@@ -980,13 +980,20 @@ async function handleCuratedAnime() {
     const response = await fetch(CURATED_ANIME_LIST_URL, { headers: { "User-Agent": UA, "Accept": "text/html" }, redirect: "follow" });
     if (!response.ok) return json({ sections: [] }, 200, { "x-curated-source": "unavailable" });
     const html = await response.text();
-    const blocks = html.match(/<li[^>]*>[\s\\S]*?<\/li>/gi) || [];
     const entries = [];
-    for (const block of blocks) {
-      const linkMatch = block.match(/<a[^>]+href=["']\/title\/(tt\\d+)\/[^>]*>([^<]+)<\/a>/i);
-      if (!linkMatch) continue;
-      const name = linkMatch[2].replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/^\s*\\d+\\.\s*/, "").trim();
-      if (name && !entries.some((e) => e.name === name)) entries.push({ id: linkMatch[1], name });
+    for (const block of html.split("</li>")) {
+      const marker = block.indexOf("title/tt");
+      if (marker < 0) continue;
+      const idStart = marker + "title/".length;
+      let idEnd = idStart;
+      while (idEnd < block.length && /[0-9]/.test(block[idEnd])) idEnd++;
+      const id = block.slice(marker + "title/".length, idEnd);
+      const anchorStart = block.indexOf(">", idEnd);
+      const anchorEnd = block.indexOf("</a>", anchorStart);
+      if (!id || anchorStart < 0 || anchorEnd < 0) continue;
+      const rawName = block.slice(anchorStart + 1, anchorEnd);
+      const name = rawName.replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/^\s*\d+\.\s*/, "").trim();
+      if (name && !entries.some((e) => e.name === name)) entries.push({ id: "tt" + id, name });
     }
     const movies = [];
     for (let i = 0; i < Math.min(entries.length, 24); i += 4) {
