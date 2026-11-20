@@ -33,13 +33,16 @@ const fetch = async (input, init = {}) => {
   const request = { ...init, headers };
   // Cache catalogue JSON only. Never cache media streams or playback CDN responses.
   const method = (init.method || "GET").toUpperCase();
-  const isJsonApi = u.startsWith(H5_API) && !u.includes("/media-player/") && !u.includes("/subject/play");
+  const isJsonApi = (u.startsWith(H5_API) && !u.includes("/media-player/") && !u.includes("/subject/play")) || u.startsWith(BASE_URL + "/detail/");
   if (!isJsonApi || method === "OPTIONS") return globalThis.fetch(input, request);
   const cacheKey = method + ":" + u + ":" + (init.body || "");
   const cached = providerCache.get(cacheKey);
   const now = Date.now();
   if (cached && cached.freshUntil > now) return cached.response.clone();
-  if (providerCooldown.until > now && cached && cached.staleUntil > now) return cached.response.clone();
+  if (providerCooldown.until > now) {
+    if (cached && cached.staleUntil > now) return cached.response.clone();
+    return new Response(JSON.stringify({ error: "Upstream temporarily rate-limited; retry later." }), { status: 503, headers: { "Content-Type": "application/json" } });
+  }
   if (providerFlights.has(cacheKey)) return (await providerFlights.get(cacheKey)).clone();
   const flight = (async () => {
     try {
