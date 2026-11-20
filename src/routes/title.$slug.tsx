@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Check, ChevronDown, ChevronLeft, Settings2, ChevronRight, Circle, CircleCheck, Crown, Download, FolderDown, ListPlus, Play, Share2, Star, Volume2, VolumeX, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, Settings2, ChevronRight, Circle, CircleCheck, Crown, Download, FolderDown, ListPlus, Play, Share2, Star, X } from "lucide-react";
 import { downloads, history, myList } from "@/lib/library";
 import { get, RateLimitError, watchUrl, type Section } from "@/lib/api";
 import { savedProgress, saveProgress, stablePlaybackTitle } from "@/lib/playback";
@@ -43,7 +43,7 @@ function TitlePage() {
   const [ep, setEp] = useState(1);
   const [res, setRes] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const [playbackError, setPlaybackError] = useState(false);
   const player = useRef<HTMLDivElement>(null);
   const [info, setInfo] = useState(false);
@@ -57,11 +57,11 @@ function TitlePage() {
   const { data: home } = useQuery({ queryKey: ["home"], queryFn: () => get<{ sections: Section[] }>("/home"), staleTime: 5 * 60_000 });
   const { data: animeFeed } = useQuery({ queryKey: ["anime-trending"], queryFn: () => get<Section>("/anime"), staleTime: 5 * 60_000 });
 
-  useEffect(() => { setPlaying(false); setMuted(true); setPlaybackError(false); setPicked([]); setInList(myList.has(slug)); }, [slug]);
-  // Start playback as soon as the title and episode metadata are ready. Muted autoplay is required by mobile browsers.
+  useEffect(() => { setPlaying(false); setMuted(false); setPlaybackError(false); setPicked([]); setInList(myList.has(slug)); }, [slug]);
+  // Start playback as soon as title and episode metadata are ready. Try audio first; fall back to muted autoplay when the browser blocks it.
   useEffect(() => {
     if (!data?.metadata || episodesLoading) return;
-    setMuted(true);
+    setMuted(false);
     setPlaybackError(false);
     setPlaying(true);
   }, [slug, data?.metadata?.id, episodesLoading]);
@@ -111,7 +111,13 @@ function TitlePage() {
   const playbackSeason = isSeries ? se : 0;
   const playbackEpisode = isSeries ? ep : 0;
   const startPlayback = (element: HTMLVideoElement) => {
-    element.play().catch(() => setPlaybackError(true));
+    element.play().catch(() => {
+      // Mobile browsers commonly block audible autoplay. Keep playback running muted;
+      // the browser-native volume control lets the viewer turn sound on with one tap.
+      element.muted = true;
+      setMuted(true);
+      element.play().catch(() => setPlaybackError(true));
+    });
   };
   const rememberProgress = () => {
     const current = video.current?.currentTime;
@@ -185,23 +191,6 @@ function TitlePage() {
             <button onClick={() => play()} className="group absolute inset-0" aria-label="Play">
               <img src={m.poster} alt={m.title} className="h-full w-full object-cover opacity-60" />
               <span className="play-fab absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2"><Play className="h-7 w-7 fill-current" /></span>
-            </button>
-          )}
-          {playing && (
-            <button
-              type="button"
-              onClick={() => {
-                const nextMuted = !muted;
-                setMuted(nextMuted);
-                if (video.current) {
-                  video.current.muted = nextMuted;
-                  if (!nextMuted) video.current.play().catch(() => setPlaybackError(true));
-                }
-              }}
-              aria-label={muted ? "Turn sound on" : "Mute"}
-              className="absolute right-3 top-3 z-20 grid h-11 w-11 place-items-center rounded-full bg-black/65 text-white shadow-lg"
-            >
-              {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
             </button>
           )}
           {playbackError && (
