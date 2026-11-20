@@ -980,12 +980,12 @@ async function handleCuratedAnime() {
     const response = await fetch(CURATED_ANIME_LIST_URL, { headers: { "User-Agent": UA, "Accept": "text/html" }, redirect: "follow" });
     if (!response.ok) return json({ sections: [] }, 200, { "x-curated-source": "unavailable" });
     const html = await response.text();
-    const blocks = html.match(/<li[^>]*>[\\s\\S]*?<\\/li>/gi) || [];
+    const blocks = html.match(/<li[^>]*>[\s\\S]*?<\/li>/gi) || [];
     const entries = [];
     for (const block of blocks) {
-      const linkMatch = block.match(/<a[^>]+href=["']\\/title\\/(tt\\d+)\\/[^>]*>([^<]+)<\\/a>/i);
+      const linkMatch = block.match(/<a[^>]+href=["']\/title\/(tt\\d+)\/[^>]*>([^<]+)<\/a>/i);
       if (!linkMatch) continue;
-      const name = linkMatch[2].replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/^\\s*\\d+\\.\\s*/, "").trim();
+      const name = linkMatch[2].replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/^\s*\\d+\\.\s*/, "").trim();
       if (name && !entries.some((e) => e.name === name)) entries.push({ id: linkMatch[1], name });
     }
     const movies = [];
