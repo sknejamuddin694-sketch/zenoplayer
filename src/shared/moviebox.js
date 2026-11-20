@@ -613,7 +613,7 @@ async function handleSearch(params) {
       body: JSON.stringify({ keyword: q, perPage: 50, page: 1 }),
     }
   );
-  if (!resp.ok) return json({ error: "Search API failed" }, 502);
+  if (!resp.ok) return json({ error: "Search API failed", upstream_status: resp.status, retry_after: resp.headers.get("retry-after") || null, message: resp.status === 429 ? "Provider rate-limited requests; retry later." : resp.status === 403 ? "Provider blocked this server request." : "Provider search endpoint returned an error." }, resp.status === 429 ? 503 : 502, { "cache-control": "no-store" });
   const body = await resp.json();
   const items = body?.data?.items || [];
 
