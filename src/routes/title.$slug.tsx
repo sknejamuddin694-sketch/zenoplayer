@@ -187,6 +187,24 @@ function TitlePage() {
                   setPlaying(true);
                 }
               }} />
+            <button
+              type="button"
+              aria-label="Fullscreen"
+              onClick={() => {
+                const v = video.current;
+                if (!v) return;
+                try {
+                  if (v.requestFullscreen) v.requestFullscreen().catch(() => {});
+                  else if ((v as any).webkitEnterFullscreen) (v as any).webkitEnterFullscreen();
+                  else if ((player.current as any)?.requestFullscreen) (player.current as any).requestFullscreen().catch(() => {});
+                } catch {}
+              }}
+              className="absolute bottom-12 right-3 z-20 grid h-10 w-10 place-items-center rounded-md bg-black/55 text-white"
+            >
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3" />
+              </svg>
+            </button>
           ) : (
             <button onClick={() => play()} className="group absolute inset-0" aria-label="Play">
               <img src={m.poster} alt={m.title} className="h-full w-full object-cover opacity-60" />
