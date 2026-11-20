@@ -834,7 +834,7 @@ async function handleEpisodes(slug) {
         ep: i,
         se: s.se,
         watch_url: null,
-        stream_api_url: null
+        download_url: null
       });
     }
     return {
