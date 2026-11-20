@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Check, ChevronDown, ChevronLeft, Settings2, ChevronRight, Circle, CircleCheck, Crown, Download, FolderDown, ListPlus, Play, Share2, Star, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, Settings2, ChevronRight, Circle, CircleCheck, Crown, Download, FolderDown, ListPlus, Play, Share2, Star, Volume2, VolumeX, X } from "lucide-react";
 import { downloads, history, myList } from "@/lib/library";
 import { get, RateLimitError, watchUrl, type Section } from "@/lib/api";
 import { savedProgress, saveProgress, stablePlaybackTitle } from "@/lib/playback";
@@ -37,12 +37,13 @@ const RES = [0, 1080, 720, 480, 360];
 function TitlePage() {
   const { slug } = Route.useParams();
   const { data, isLoading, error } = useQuery({ queryKey: ["detail", slug], queryFn: () => get<Detail>(`/detail/${slug}`) });
-  const { data: eps } = useQuery({ queryKey: ["eps", slug], queryFn: () => get<Episodes>(`/episodes/${slug}`) });
+  const { data: eps, isLoading: episodesLoading } = useQuery({ queryKey: ["eps", slug], queryFn: () => get<Episodes>(`/episodes/${slug}`) });
   const isSeries = (eps?.total_seasons ?? 0) > 0;
   const [se, setSe] = useState(1);
   const [ep, setEp] = useState(1);
   const [res, setRes] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [playbackError, setPlaybackError] = useState(false);
   const player = useRef<HTMLDivElement>(null);
   const [info, setInfo] = useState(false);
@@ -56,7 +57,14 @@ function TitlePage() {
   const { data: home } = useQuery({ queryKey: ["home"], queryFn: () => get<{ sections: Section[] }>("/home"), staleTime: 5 * 60_000 });
   const { data: animeFeed } = useQuery({ queryKey: ["anime-trending"], queryFn: () => get<Section>("/anime"), staleTime: 5 * 60_000 });
 
-  useEffect(() => { setPlaying(false); setPlaybackError(false); setPicked([]); setInList(myList.has(slug)); }, [slug]);
+  useEffect(() => { setPlaying(false); setMuted(true); setPlaybackError(false); setPicked([]); setInList(myList.has(slug)); }, [slug]);
+  // Start playback as soon as the title and episode metadata are ready. Muted autoplay is required by mobile browsers.
+  useEffect(() => {
+    if (!data?.metadata || episodesLoading) return;
+    setMuted(true);
+    setPlaybackError(false);
+    setPlaying(true);
+  }, [slug, data?.metadata?.id, episodesLoading]);
   useEffect(() => { if (data?.metadata) history.add({ name: data.metadata.title, poster_url: data.metadata.poster, slug }); }, [data, slug]);
   useEffect(() => {
     if (!data?.metadata?.title || !eps) return;
@@ -103,10 +111,7 @@ function TitlePage() {
   const playbackSeason = isSeries ? se : 0;
   const playbackEpisode = isSeries ? ep : 0;
   const startPlayback = (element: HTMLVideoElement) => {
-    element.play().catch(() => {
-      // Browsers may block audible autoplay until the first user gesture.
-      // The native controls remain available without forcing a second app tap.
-    });
+    element.play().catch(() => setPlaybackError(true));
   };
   const rememberProgress = () => {
     const current = video.current?.currentTime;
@@ -130,6 +135,7 @@ function TitlePage() {
     rememberProgress();
     flushSync(() => {
       setPlaybackError(false);
+      setMuted(false);
       if (s) { setSe(s); setBrowseSe(s); }
       if (e) setEp(e);
       setPlaying(true);
@@ -155,7 +161,7 @@ function TitlePage() {
       <div ref={player} className="sticky top-0 z-30 bg-background">
         <div className="relative aspect-video w-full overflow-hidden bg-card">
           {playing ? (
-            <video ref={video} key={src} src={src} controls autoPlay playsInline preload="auto" controlsList="nodownload noremoteplayback" disablePictureInPicture
+            <video ref={video} key={src} src={src} controls autoPlay muted={muted} playsInline preload="auto" controlsList="nodownload noremoteplayback" disablePictureInPicture
               onError={() => setPlaybackError(true)}
               onContextMenu={(e) => e.preventDefault()} className="h-full w-full bg-background"
               onLoadedMetadata={(e) => {
@@ -179,6 +185,23 @@ function TitlePage() {
             <button onClick={() => play()} className="group absolute inset-0" aria-label="Play">
               <img src={m.poster} alt={m.title} className="h-full w-full object-cover opacity-60" />
               <span className="play-fab absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2"><Play className="h-7 w-7 fill-current" /></span>
+            </button>
+          )}
+          {playing && (
+            <button
+              type="button"
+              onClick={() => {
+                const nextMuted = !muted;
+                setMuted(nextMuted);
+                if (video.current) {
+                  video.current.muted = nextMuted;
+                  if (!nextMuted) video.current.play().catch(() => setPlaybackError(true));
+                }
+              }}
+              aria-label={muted ? "Turn sound on" : "Mute"}
+              className="absolute right-3 top-3 z-20 grid h-11 w-11 place-items-center rounded-full bg-black/65 text-white shadow-lg"
+            >
+              {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
             </button>
           )}
           {playbackError && (
