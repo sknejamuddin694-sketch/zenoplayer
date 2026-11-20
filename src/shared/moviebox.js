@@ -139,7 +139,7 @@ const CORS = {
 // ══════════════════════════════════════════════════════════════════
 
 export default {
-  async fetch(request) {
+  async fetch(request, env = {}) {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
     }
@@ -198,7 +198,7 @@ export default {
 
       // ── Detail ────────────────────────────────────────────
       m = p.match(/^\/detail\/(.+)$/);
-      if (m) return handleDetail(decodeURIComponent(m[1]));
+      if (m) return handleDetail(decodeURIComponent(m[1]), env);
 
       // ── Episodes ──────────────────────────────────────────
       m = p.match(/^\/episodes\/(.+)$/);
@@ -667,11 +667,34 @@ async function handleSearch(params) {
   return json(payload, 200, { "x-search-cache": "MISS" });
 }
 
+// Licensed playback-provider adapter. Set PLAYBACK_API_URL to a provider endpoint you own or are licensed to use.
+// Provider response shape: { sources: [{ url, quality, type }], subtitles?: [...] }
+async function getLicensedPlayback(slug, env = {}) {
+  const endpoint = env.PLAYBACK_API_URL;
+  if (!endpoint) return { available: false, mp4: null, hls: null, sources: [], subtitles: [], message: 'No licensed playback provider configured. Set PLAYBACK_API_URL.' };
+  try {
+    const url = new URL(endpoint);
+    if (url.protocol !== 'https:') throw new Error('HTTPS required');
+    url.searchParams.set('slug', slug);
+    const response = await globalThis.fetch(url.toString(), { headers: { Accept: 'application/json' } });
+    if (!response.ok) return { available: false, mp4: null, hls: null, sources: [], subtitles: [], message: 'Provider request failed.', provider_status: response.status };
+    const data = await response.json();
+    const sources = Array.isArray(data.sources) ? data.sources.filter(s => s && typeof s.url === 'string' && s.url.startsWith('https://')).map(s => ({ url: s.url, quality: s.quality || 'unknown', type: s.type || (s.url.includes('.m3u8') ? 'hls' : 'mp4') })) : [];
+    const mp4 = sources.filter(s => s.type === 'mp4');
+    const hls = sources.filter(s => s.type === 'hls');
+    return { available: sources.length > 0, mp4, hls, sources, subtitles: Array.isArray(data.subtitles) ? data.subtitles : [], message: sources.length ? null : 'Provider returned no playable sources.' };
+  } catch { return { available: false, mp4: null, hls: null, sources: [], subtitles: [], message: 'Provider configuration/request failed.' }; }
+}
+async function handleLicensedPlayback(slug, env = {}) {
+  const result = await getLicensedPlayback(slug, env);
+  return json({ slug, ...result }, result.available ? 200 : 503);
+}
+
 // ══════════════════════════════════════════════════════════════════
 // GET /detail/{slug}  — full metadata from NUXT_DATA
 // ══════════════════════════════════════════════════════════════════
 
-async function handleDetail(slug) {
+async function handleDetail(slug, env = {}) {
   const pageUrl = `${BASE_URL}/detail/${slug}`;
   const resp = await fetch(pageUrl, {
     headers: { "User-Agent": UA },
@@ -767,12 +790,7 @@ async function handleDetail(slug) {
           created_at: r.createdAt || null,
         })),
     },
-    streams: {
-      available: false,
-      mp4: null,
-      hls: null,
-      message: "Playback sources are not provided by this metadata endpoint.",
-    },
+    streams: await getLicensedPlayback(slug, env),
   });
 }
 
