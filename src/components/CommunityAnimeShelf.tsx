@@ -16,10 +16,14 @@ export function CommunityAnimeShelf({ enabled }: { enabled: boolean }) {
   const [checking, setChecking] = useState(false);
   const requested = useRef(new Set<string>());
   const visible = useMemo(() => items.slice(0, page * PAGE_SIZE), [page]);
+  const seenSlugs = new Set<string>();
   const available = visible.flatMap((item) => {
     const match = matches[item.imdbId];
-    return match ? [match] : [];
+    if (!match || !match.slug || seenSlugs.has(match.slug)) return [];
+    seenSlugs.add(match.slug);
+    return [match];
   });
+  const isChecking = checking || checked < visible.length;
 
   useEffect(() => {
     if (!enabled) return;
@@ -62,7 +66,7 @@ export function CommunityAnimeShelf({ enabled }: { enabled: boolean }) {
         <div>
           <h2>Community anime · Watch now</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {checking ? `Checking community picks… ${checked}/${visible.length}` : `${available.length} available from ${visible.length} checked`}
+            {isChecking ? `Checking community picks… ${checked}/${visible.length}` : `${available.length} available from ${visible.length} checked`}
           </p>
         </div>
         <Link to="/anime-library" className="section-link">See all <ArrowUpRight className="h-4 w-4" /></Link>
@@ -80,17 +84,17 @@ export function CommunityAnimeShelf({ enabled }: { enabled: boolean }) {
         </div>
       ) : (
         <p className="py-4 text-sm text-muted-foreground">
-          {checking ? "Finding titles available to watch…" : "No available titles found in this batch."}
+          {isChecking ? "Finding titles available to watch…" : "No available titles found in this batch."}
         </p>
       )}
       {page * PAGE_SIZE < items.length && (
         <button
           type="button"
           onClick={() => setPage((current) => current + 1)}
-          disabled={checking}
+          disabled={isChecking}
           className="btn-ghost mx-auto mt-4 flex"
         >
-          {checking ? "Checking…" : "Load more community anime"}
+          {isChecking ? "Checking…" : "Load more community anime"}
           <ArrowUpRight className="h-4 w-4" />
         </button>
       )}
