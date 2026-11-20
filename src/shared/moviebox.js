@@ -31,6 +31,8 @@ const fetch = (input, init = {}) => {
 };
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const searchCache = new Map();
+const curatedAnimeCache = { expires: 0, payload: null };
+const CURATED_ANIME_LIST_URL = "https://www.imdb.com/list/ls084262092/";
 const CANONICAL_OSHI_NO_KO = {
   name: "Oshi No Ko S1-S3",
   poster_url: "https://pbcdnw.aoneroom.com/image/2026/08/23/da40eafdef4d64e3f50e41fc2c5fc944.jpg?x-oss-process=image/resize%2Cw_250",
@@ -114,6 +116,7 @@ export default {
       if (p === "/home") return handleHome();
       if (p === "/tab/movie") return json({ sections: await fetchHomeData(2) });
       if (p === "/anime") return handleTrendingGenre("Anime");
+      if (p === "/curated-anime") return handleCuratedAnime();
       if (p === "/home/sections") return handleHomeSections();
       if (p === "/home/banner") return handleHomeBanner();
       if (p === "/home/trending") return handleHomeFilter("trending now", "popular movie");
@@ -970,6 +973,42 @@ async function handleTrendingGenre(genre) {
   return json({ section: genre, count: movies.length, movies });
 }
 
+// Curated anime feed; upstream is fetched server-side and cached.
+async function handleCuratedAnime() {
+  if (curatedAnimeCache.payload && curatedAnimeCache.expires > Date.now()) return json(curatedAnimeCache.payload, 200, { "x-curated-cache": "HIT" });
+  try {
+    const response = await fetch(CURATED_ANIME_LIST_URL, { headers: { "User-Agent": UA, "Accept": "text/html" }, redirect: "follow" });
+    if (!response.ok) return json({ sections: [] }, 200, { "x-curated-source": "unavailable" });
+    const html = await response.text();
+    const blocks = html.match(/<li[^>]*>[\\s\\S]*?<\\/li>/gi) || [];
+    const entries = [];
+    for (const block of blocks) {
+      const linkMatch = block.match(/<a[^>]+href=["']\\/title\\/(tt\\d+)\\/[^>]*>([^<]+)<\\/a>/i);
+      if (!linkMatch) continue;
+      const name = linkMatch[2].replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/^\\s*\\d+\\.\\s*/, "").trim();
+      if (name && !entries.some((e) => e.name === name)) entries.push({ id: linkMatch[1], name });
+    }
+    const movies = [];
+    for (let i = 0; i < Math.min(entries.length, 24); i += 4) {
+      const batch = entries.slice(i, i + 4);
+      const found = await Promise.all(batch.map(async (entry) => {
+        try {
+          const resp = await fetch(H5_API + "/wefeed-h5api-bff/subject/search", { method: "POST", headers: { ...(await movieBoxHeaders(entry.name)), "Content-Type": "application/json" }, body: JSON.stringify({ keyword: entry.name, perPage: 12, page: 1 }) });
+          if (!resp.ok) return null;
+          const body = await resp.json();
+          const item = (body?.data?.items || []).find((x) => x.detailPath && searchRank(x.title || "", entry.name) > 0);
+          return item ? { name: item.title, poster_url: item.cover?.url || null, slug: item.detailPath, badge: item.corner || null, year: item.releaseDate || item.year || null } : null;
+        } catch { return null; }
+      }));
+      movies.push(...found.filter(Boolean));
+    }
+    const seen = new Set();
+    const unique = movies.filter((item) => !seen.has(item.slug) && seen.add(item.slug);
+    const payload = { sections: unique.length ? [{ section: "Recommended anime", count: unique.length, movies: unique }] : [] };
+    curatedAnimeCache.payload = payload; curatedAnimeCache.expires = Date.now() + 21600000;
+    return json(payload, 200, { "x-curated-cache": "MISS" });
+  } catch { return json({ sections: [] }, 200, { "x-curated-source": "unavailable" }); }
+}
 // Language versions (dubs/subs) from the H5 detail API; the page scrape often omits them.
 async function fetchDubs(slug) {
   try {
