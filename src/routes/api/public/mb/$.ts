@@ -23,7 +23,7 @@ function allowedProviderUrl(target: URL) {
 function rewriteExternalUrls(value: unknown, publicOrigin: string): unknown {
   if (typeof value === "string") {
     if (value.startsWith("//")) value = "https:" + value;
-    if (!/^https?:\\/\\//i.test(value)) return value;
+    if (!/^https?:\/\//i.test(value)) return value;
     try {
       const remote = new URL(value);
       if (remote.origin === publicOrigin) return value;
