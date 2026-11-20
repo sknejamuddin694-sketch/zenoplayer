@@ -13,12 +13,15 @@ const DEFAULT_DOMAIN = "https://123movienow.cc";
 // (Hindi / Tamil / Telugu dubs, Bollywood, anime) on every catalogue API call.
 const REGION_IP = "49.36.10.1";
 const IS_BROWSER = typeof window !== "undefined" && typeof document !== "undefined";
-const fetch = (input, init = {}) => {
+// Provider API response cache with stale-if-error fallback and rate-limit cooldown.
+const providerCache = new Map();
+const providerCooldown = { until: 0 };
+const providerFlights = new Map();
+const CACHE_FRESH_MS = 3 * 60 * 1000;
+const CACHE_STALE_MS = 12 * 60 * 60 * 1000;
+const fetch = async (input, init = {}) => {
   const u = typeof input === "string" ? input : input.url;
   if (IS_BROWSER) {
-    // Running in the visitor's browser (fallback when the host's servers are blocked by the
-    // provider). Browsers can't send custom UA/XFF/cookie headers, and the provider's CORS only
-    // allows content-type, so strip everything else. The visitor's own IP picks the region.
     const src = new Headers(init.headers || {});
     const headers = {};
     if (src.get("content-type")) headers["content-type"] = src.get("content-type");
@@ -27,7 +30,38 @@ const fetch = (input, init = {}) => {
   if (!u.startsWith(H5_API) && !u.startsWith("https://moviebox.ph")) return globalThis.fetch(input, init);
   const headers = new Headers(init.headers || {});
   headers.set("X-Forwarded-For", REGION_IP);
-  return globalThis.fetch(input, { ...init, headers });
+  const request = { ...init, headers };
+  // Cache catalogue JSON only. Never cache media streams or playback CDN responses.
+  const method = (init.method || "GET").toUpperCase();
+  const isJsonApi = u.startsWith(H5_API) && !u.includes("/media-player/") && !u.includes("/subject/play");
+  if (!isJsonApi || method === "OPTIONS") return globalThis.fetch(input, request);
+  const cacheKey = method + ":" + u + ":" + (init.body || "");
+  const cached = providerCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && cached.freshUntil > now) return cached.response.clone();
+  if (providerCooldown.until > now && cached && cached.staleUntil > now) return cached.response.clone();
+  if (providerFlights.has(cacheKey)) return (await providerFlights.get(cacheKey)).clone();
+  const flight = (async () => {
+    try {
+      const response = await globalThis.fetch(input, request);
+      if (response.status === 429 || response.status === 503) {
+        providerCooldown.until = Math.max(providerCooldown.until, Date.now() + 90_000);
+        if (cached && cached.staleUntil > Date.now()) return cached.response.clone();
+      }
+      if (response.ok) {
+        const clone = response.clone();
+        providerCache.set(cacheKey, { response: clone, freshUntil: Date.now() + CACHE_FRESH_MS, staleUntil: Date.now() + CACHE_STALE_MS });
+      }
+      return response;
+    } catch (error) {
+      if (cached && cached.staleUntil > Date.now()) return cached.response.clone();
+      throw error;
+    } finally {
+      providerFlights.delete(cacheKey);
+    }
+  })();
+  providerFlights.set(cacheKey, flight);
+  return flight;
 };
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const searchCache = new Map();
