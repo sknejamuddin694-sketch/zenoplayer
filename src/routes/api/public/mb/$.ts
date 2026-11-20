@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import worker from "@/shared/moviebox.js";
-import { isProxyRequestAllowed } from "@/lib/proxy-guard";
 
 const buckets = new Map<string, { count: number; reset: number }>();
 const WINDOW_MS = 60_000;
@@ -24,7 +23,6 @@ function limited(request: Request, path: string) {
 }
 
 async function handle({ request }: { request: Request }) {
-  if (!isProxyRequestAllowed(request)) return new Response("Forbidden", { status: 403 });
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/api\/public\/mb/, "") || "/";
   if (limited(request, path)) return new Response("Too Many Requests", { status: 429, headers: { "retry-after": "60", "cache-control": "no-store" } });
@@ -34,7 +32,9 @@ async function handle({ request }: { request: Request }) {
   });
   const res = await worker.fetch(target);
   const out = new Response(res.body, res);
-  out.headers.delete("access-control-allow-origin");
+  out.headers.set("access-control-allow-origin", "*");
+  out.headers.set("access-control-allow-methods", "GET, HEAD, OPTIONS");
+  out.headers.set("access-control-allow-headers", "Content-Type");
   out.headers.set("x-robots-tag", "noindex, nofollow");
   out.headers.set("x-content-type-options", "nosniff");
   out.headers.set("referrer-policy", "same-origin");
@@ -49,5 +49,5 @@ async function handle({ request }: { request: Request }) {
 }
 
 export const Route = createFileRoute("/api/public/mb/$")({
-  server: { handlers: { GET: handle, HEAD: handle } },
+  server: { handlers: { GET: handle, HEAD: handle, OPTIONS: () => new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET, HEAD, OPTIONS", "access-control-allow-headers": "Content-Type", "access-control-max-age": "86400" } }) } },
 });
