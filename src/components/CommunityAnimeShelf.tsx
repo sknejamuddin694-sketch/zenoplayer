@@ -36,7 +36,7 @@ export function CommunityAnimeShelf({ enabled }: { enabled: boolean }) {
             const wanted = item.title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
             const prefix = wanted.split(" ").slice(0, 3).join(" ");
             const match = result.movies?.find((movie) =>
-              movie.name.toLowerCase().replace(/\\[[^\\]]+\\]/g, "").replace(/[^a-z0-9]+/g, " ").trim().includes(prefix)
+              movie.name.toLowerCase().replace(/\[[^\]]+\]/g, "").replace(/[^a-z0-9]+/g, " ").trim().includes(prefix)
             ) ?? result.movies?.[0] ?? null;
             return [item.imdbId, match] as const;
           } catch {
