@@ -53,10 +53,10 @@ function Home() {
         const trending = uniqueItems(trend.movies ?? []);
         const curatedMovies = curated.sections.flatMap((section) => section.movies);
         const banner = { section: "Banner", count: 0, movies: uniqueItems([...curatedMovies, ...trending, ...top.flatMap((section) => section.movies)]).slice(0, 8) };
-        const curated = animeCollections(home.sections, trending);
+        const collectionData = animeCollections(home.sections, trending);
         const liveAnimation = animation.sections.flatMap((section) => section.movies).length ? animation.sections : [];
         const seen = new Set<string>();
-        const shelves = [...curated.sections, ...liveAnimation, ...top, ...curated].filter((section) => {
+        const shelves = [...collectionData.sections, ...liveAnimation, ...top, ...collectionData.sections].filter((section) => {
           if (seen.has(section.section)) return false;
           seen.add(section.section);
           return section.movies.length > 0;
