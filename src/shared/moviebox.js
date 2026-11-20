@@ -204,6 +204,10 @@ export default {
       m = p.match(/^\/episodes\/(.+)$/);
       if (m) return handleEpisodes(decodeURIComponent(m[1]));
 
+      // ── Licensed playback provider ─────────────────────────
+      m = p.match(/^\/api\/playback\/(.+)$/);
+      if (m) return handleLicensedPlayback(decodeURIComponent(m[1]), env);
+
       // ── Streaming ─────────────────────────────────────────
       m = p.match(/^\/api\/stream\/(\d+)$/);
       if (m) return handleStreamApi(m[1], url.searchParams);
