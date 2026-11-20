@@ -984,10 +984,10 @@ async function handleCuratedAnime() {
     for (const block of html.split("</li>")) {
       const marker = block.indexOf("title/tt");
       if (marker < 0) continue;
-      const idStart = marker + "title/".length;
+      const idStart = marker + "title/tt".length;
       let idEnd = idStart;
       while (idEnd < block.length && /[0-9]/.test(block[idEnd])) idEnd++;
-      const id = block.slice(marker + "title/".length, idEnd);
+      const id = "tt" + block.slice(idStart, idEnd);
       const anchorStart = block.indexOf(">", idEnd);
       const anchorEnd = block.indexOf("</a>", anchorStart);
       if (!id || anchorStart < 0 || anchorEnd < 0) continue;
