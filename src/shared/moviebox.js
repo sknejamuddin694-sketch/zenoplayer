@@ -767,7 +767,12 @@ async function handleDetail(slug) {
           created_at: r.createdAt || null,
         })),
     },
-    streams: { mp4: [], hls: [] },
+    streams: {
+      available: false,
+      mp4: null,
+      hls: null,
+      message: "Playback sources are not provided by this metadata endpoint.",
+    },
   });
 }
 
@@ -860,7 +865,11 @@ async function fetchStreams(domain, subjectId, detailPath, se, ep) {
 }
 
 async function handleStreamApi() {
-  return json({ error: "Direct stream metadata is not public" }, 410);
+  return json({
+    available: false,
+    error: "Playback metadata is unavailable from this public endpoint.",
+    note: "This endpoint exposes catalogue metadata only; configure a licensed playback provider to enable playback.",
+  }, 501);
 }
 
 async function handleStreamApiLegacy(subjectId, params) {
