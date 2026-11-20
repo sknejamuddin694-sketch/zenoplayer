@@ -1030,7 +1030,7 @@ async function handleCuratedAnime() {
       if (!id || anchorStart < 0 || anchorEnd < 0) continue;
       const rawName = block.slice(anchorStart + 1, anchorEnd);
       const name = rawName.replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/^\s*\d+\.\s*/, "").trim();
-      if (name && !entries.some((e) => e.name === name)) entries.push({ id: "tt" + id, name });
+      if (name && !entries.some((e) => e.name === name)) entries.push({ id, name });
     }
     const movies = [];
     for (let i = 0; i < Math.min(entries.length, 24); i += 4) {
