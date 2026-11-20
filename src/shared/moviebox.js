@@ -1003,7 +1003,7 @@ async function handleCuratedAnime() {
       movies.push(...found.filter(Boolean));
     }
     const seen = new Set();
-    const unique = movies.filter((item) => !seen.has(item.slug) && seen.add(item.slug);
+    const unique = movies.filter((item) => { if (seen.has(item.slug)) return false; seen.add(item.slug); return true; });
     const payload = { sections: unique.length ? [{ section: "Recommended anime", count: unique.length, movies: unique }] : [] };
     curatedAnimeCache.payload = payload; curatedAnimeCache.expires = Date.now() + 21600000;
     return json(payload, 200, { "x-curated-cache": "MISS" });
