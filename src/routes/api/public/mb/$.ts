@@ -134,6 +134,28 @@ async function handle({ request }: { request: Request }) {
     ? await proxyProviderAsset(request, url)
     : await worker.fetch(target);
 
+  // Populate episode watch links automatically using the public streaming endpoint.
+  if (request.method !== "HEAD" && path.startsWith("/episodes/") && res.ok && (res.headers.get("content-type") || "").includes("json")) {
+    try {
+      const episodePayload = await res.clone().json();
+      const slug = decodeURIComponent(path.slice("/episodes/".length));
+      const subjectId = episodePayload?.subject_id;
+      if (subjectId && Array.isArray(episodePayload?.seasons)) {
+        for (const season of episodePayload.seasons) {
+          for (const episode of season.episodes || []) {
+            const watch = new URL(`/api/public/mb/watch/${subjectId}`, url.origin);
+            watch.searchParams.set("detail_path", slug);
+            watch.searchParams.set("se", String(episode.se ?? season.season ?? season.se ?? 1));
+            watch.searchParams.set("ep", String(episode.ep ?? 1));
+            watch.searchParams.set("resolution", "480");
+            episode.watch_url = watch.toString();
+          }
+        }
+        res = new Response(JSON.stringify(episodePayload), { status: res.status, statusText: res.statusText, headers: res.headers });
+      }
+    } catch { /* Keep original episode metadata if link generation fails. */ }
+  }
+
   // Rewrite every absolute URL in JSON payloads so API consumers only see ZenoPlayer links.
   if (request.method !== "HEAD" && (res.headers.get("content-type") || "").includes("json")) {
     try {
