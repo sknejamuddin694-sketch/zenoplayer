@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState, useEffect } from "react";
-import { ArrowUpRight, Check, ExternalLink, Plus, Search } from "lucide-react";
+import { ArrowUpRight, Check, ExternalLink, Play, Plus, Search } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { Header } from "@/components/Header";
 import { get, type Item } from "@/lib/api";
@@ -87,7 +87,7 @@ function AnimeLibrary() {
                   <h2>{match ? <Link to="/title/$slug" params={{ slug: match.slug }}>{item.title}</Link> : item.title}</h2>
                   <p className={match ? "text-premium" : checked ? "text-muted-foreground" : "text-primary"}>{match ? "Available to watch" : checked ? "Not available right now" : "Checking availability"}</p>
                   <div className="community-actions">
-                    {match ? <button type="button" aria-pressed={tracked.has(match.slug)} onClick={() => { const alreadyTracked = tracked.has(match.slug); myList.toggle(match); setTracked((current) => { const next = new Set(current); if (alreadyTracked) next.delete(match.slug); else next.add(match.slug); return next; }); }} className={tracked.has(match.slug) ? "btn-ghost" : "btn-primary"}>{tracked.has(match.slug) ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}{tracked.has(match.slug) ? "Saved" : "Track"}</button> : <Link to="/search" search={{ q: item.title }} className="btn-ghost"><Search className="h-3.5 w-3.5" />Search</Link>}
+                    {match ? <><Link to="/title/$slug" params={{ slug: match.slug }} className="btn-primary"><Play className="h-3.5 w-3.5 fill-current" />Watch now</Link><button type="button" aria-pressed={tracked.has(match.slug)} onClick={() => { const alreadyTracked = tracked.has(match.slug); myList.toggle(match); setTracked((current) => { const next = new Set(current); if (alreadyTracked) next.delete(match.slug); else next.add(match.slug); return next; }); }} className="btn-ghost">{tracked.has(match.slug) ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}{tracked.has(match.slug) ? "Saved" : "Track"}</button></> : <Link to="/search" search={{ q: item.title }} className="btn-ghost"><Search className="h-3.5 w-3.5" />Search</Link>}
                     <a href={`https://www.imdb.com/title/${item.imdbId}/`} target="_blank" rel="noreferrer" className="community-imdb" aria-label={`Open ${item.title} on IMDb`}><ExternalLink className="h-4 w-4" /></a>
                   </div>
                 </div>
