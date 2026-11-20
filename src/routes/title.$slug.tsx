@@ -167,6 +167,7 @@ function TitlePage() {
       <div ref={player} className="sticky top-0 z-30 bg-background">
         <div className="relative aspect-video w-full overflow-hidden bg-card">
           {playing ? (
+            <>
             <video ref={video} key={src} src={src} controls autoPlay muted={muted} playsInline preload="auto" controlsList="nodownload noremoteplayback" disablePictureInPicture
               onError={() => setPlaybackError(true)}
               onContextMenu={(e) => e.preventDefault()} className="h-full w-full bg-background"
@@ -205,6 +206,7 @@ function TitlePage() {
                 <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3" />
               </svg>
             </button>
+            </>
           ) : (
             <button onClick={() => play()} className="group absolute inset-0" aria-label="Play">
               <img src={m.poster} alt={m.title} className="h-full w-full object-cover opacity-60" />
