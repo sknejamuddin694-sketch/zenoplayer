@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { TrackerOverview } from "@/components/TrackerOverview";
 import { getTab, sectionsForTab } from "@/lib/tabs";
 import { animeCollections, uniqueItems } from "@/lib/recommendations";
+import { CommunityAnimeShelf } from "@/components/CommunityAnimeShelf";
 
 async function optional<T>(path: string, fallback: T): Promise<T> {
   try { return await get<T>(path); } catch { return fallback; }
@@ -115,6 +116,8 @@ function Home() {
             </Link>
           </section>
         )}
+
+        <CommunityAnimeShelf enabled={tab === "anime"} />
 
         {rest.map((section) => <Row key={section.section} section={section.section} title={section.section} items={section.movies} />)}
       </main>
