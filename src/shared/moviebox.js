@@ -605,17 +605,48 @@ async function handleSearch(params) {
   const cached = searchCache.get(key);
   if (cached && cached.expires > Date.now()) return json(cached.payload, 200, { "x-search-cache": "HIT" });
 
-  const resp = await fetch(
-    `${H5_API}/wefeed-h5api-bff/subject/search`,
-    {
-      method: "POST",
-      headers: { ...(await movieBoxHeaders(q)), "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword: q, perPage: 50, page: 1 }),
+  const upstreamError = (status) => ({ error: "Search API failed", upstream_status: status, message: status === 429 ? "Provider rate-limited requests; retry later." : status === 403 ? "Provider blocked this server request." : "Provider search endpoint returned an error." });
+  let items = [];
+  let upstreamStatus = 200;
+  try {
+    const resp = await fetch(
+      `${H5_API}/wefeed-h5api-bff/subject/search`,
+      {
+        method: "POST",
+        headers: { ...(await movieBoxHeaders(q)), "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword: q, perPage: 50, page: 1 }),
+      }
+    );
+    if (resp.ok) {
+      const body = await resp.json();
+      items = body?.data?.items || [];
+    } else {
+      upstreamStatus = resp.status;
     }
-  );
-  if (!resp.ok) return json({ error: "Search API failed", upstream_status: resp.status, retry_after: resp.headers.get("retry-after") || null, message: resp.status === 429 ? "Provider rate-limited requests; retry later." : resp.status === 403 ? "Provider blocked this server request." : "Provider search endpoint returned an error." }, resp.status === 429 ? 503 : 502, { "cache-control": "no-store" });
-  const body = await resp.json();
-  const items = body?.data?.items || [];
+  } catch { upstreamStatus = 502; }
+  if (!items.length && cached?.payload?.movies?.length) {
+    return json(cached.payload, 200, { "x-search-cache": "STALE", "x-upstream-status": String(upstreamStatus) });
+  }
+  if (!items.length) {
+    try {
+      const suggest = await fetch(
+        `${H5_API}/wefeed-h5api-bff/subject/search-suggest`,
+        {
+          method: "POST",
+          headers: { ...(await movieBoxHeaders(q)), "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword: q, perPage: 10 }),
+        }
+      );
+      if (suggest.ok) {
+        const suggestBody = await suggest.json();
+        const words = (suggestBody?.data?.items || []).map((i) => i.word).filter(Boolean);
+        items = words.map((word) => ({ title: word, detailPath: null, cover: null }));
+      } else {
+        upstreamStatus = suggest.status;
+      }
+    } catch { /* no fallback available */ }
+  }
+  if (!items.length) return json(upstreamError(upstreamStatus), upstreamStatus === 429 ? 503 : 502, { "cache-control": "no-store" });
 
   const movies = items.map((s) => ({
     name: s.title || "",
