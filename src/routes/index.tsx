@@ -43,18 +43,20 @@ function Home() {
         return { sections: [...tabMovie.sections, ...movies.sections] };
       }
       if (source === "anime") {
-        const [home, trend, animation] = await Promise.all([
+        const [home, trend, animation, curated] = await Promise.all([
           get<{ sections: Section[] }>("/home"),
           optional<Section>("/anime", { section: "Anime", count: 0, movies: [] }),
           optional<{ sections: Section[] }>("/animation", { sections: [] }),
+          optional<{ sections: Section[] }>("/curated-anime", { sections: [] }),
         ]);
         const top = home.sections.filter((section) => /anime/i.test(section.section));
         const trending = uniqueItems(trend.movies ?? []);
-        const banner = { section: "Banner", count: 0, movies: uniqueItems([...trending, ...top.flatMap((section) => section.movies)]).slice(0, 8) };
+        const curatedMovies = curated.sections.flatMap((section) => section.movies);
+        const banner = { section: "Banner", count: 0, movies: uniqueItems([...curatedMovies, ...trending, ...top.flatMap((section) => section.movies)]).slice(0, 8) };
         const curated = animeCollections(home.sections, trending);
         const liveAnimation = animation.sections.flatMap((section) => section.movies).length ? animation.sections : [];
         const seen = new Set<string>();
-        const shelves = [...liveAnimation, ...top, ...curated].filter((section) => {
+        const shelves = [...curated.sections, ...liveAnimation, ...top, ...curated].filter((section) => {
           if (seen.has(section.section)) return false;
           seen.add(section.section);
           return section.movies.length > 0;
