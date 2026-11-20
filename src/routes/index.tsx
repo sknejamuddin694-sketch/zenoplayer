@@ -44,7 +44,7 @@ function Home() {
       }
       if (source === "anime") {
         const [home, trend, animation, curated] = await Promise.all([
-          get<{ sections: Section[] }>("/home"),
+          optional<{ sections: Section[] }>("/home", { sections: [] }),
           optional<Section>("/anime", { section: "Anime", count: 0, movies: [] }),
           optional<{ sections: Section[] }>("/animation", { sections: [] }),
           optional<{ sections: Section[] }>("/curated-anime", { sections: [] }),
